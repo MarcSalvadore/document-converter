@@ -20,6 +20,33 @@ A production-ready Python tool, CLI, FastAPI REST API, single-page Web UI, and D
 
 - **Python**: 3.10+ (Python 3.13 recommended)
 - **Docker** (optional, for containerized deployment)
+- **Git**
+
+---
+
+## Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/MarcSalvadore/document-converter.git
+   cd document-converter
+   ```
+
+2. **Create a virtual environment:**
+   ```bash
+   # Windows
+   python -m venv .venv
+   .venv\Scripts\activate
+   
+   # Linux/macOS
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r converter_engine/requirements.txt
+   ```
 
 ---
 
