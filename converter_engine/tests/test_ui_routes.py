@@ -26,7 +26,7 @@ def test_convert_download_endpoint(sample_docx):
     with open(sample_docx, "rb") as f:
         response = client.post(
             "/v1/convert?download=true",
-            files={"file": ("synthetic_sample.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+            files=[("files", ("synthetic_sample.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))],
         )
 
     assert response.status_code == 200
@@ -39,7 +39,7 @@ def test_convert_file_endpoint(sample_docx):
     with open(sample_docx, "rb") as f:
         response = client.post(
             "/v1/convert/file",
-            files={"file": ("synthetic_sample.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+            files=[("files", ("synthetic_sample.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))],
         )
 
     assert response.status_code == 200

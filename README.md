@@ -57,7 +57,7 @@ A production-ready Python tool, CLI, FastAPI REST API, single-page Web UI, and D
 Start the web application server:
 
 ```powershell
-py -3.13 -m uvicorn converter_engine.api.main:app --host 127.0.0.1 --port 8000
+py -3.13 -m uvicorn converter_engine.api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ```bash
