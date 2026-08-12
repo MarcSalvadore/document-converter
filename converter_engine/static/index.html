@@ -42,6 +42,9 @@
   <!-- Marked.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+  <!-- JSZip CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
   <style>
     /* Custom Scrollbar */
     ::-webkit-scrollbar {
@@ -220,7 +223,7 @@
     <!-- Upload Dropzone Section -->
     <section class="max-w-3xl mx-auto">
       <div id="dropzone" class="relative group border-2 border-dashed border-slate-800 hover:border-brand-500/60 bg-slate-900/40 hover:bg-slate-900/80 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 shadow-xl shadow-slate-950/50">
-        <input type="file" id="file-input" accept=".docx,.pptx,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+        <input type="file" id="file-input" accept=".docx,.pptx,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple />
 
         <div id="dropzone-empty-state" class="flex flex-col items-center justify-center space-y-4">
           <div class="w-16 h-16 rounded-2xl bg-slate-800/80 group-hover:bg-brand-500/10 group-hover:text-brand-400 text-slate-400 flex items-center justify-center transition-colors duration-200 shadow-inner">
@@ -237,7 +240,7 @@
           <div class="flex items-center space-x-2 text-xs text-slate-500 pt-2">
             <span>Supports DOCX, PPTX, PDF</span>
             <span>•</span>
-            <span>Up to 50MB</span>
+            <span>Up to 100MB</span>
           </div>
         </div>
 
@@ -283,6 +286,12 @@
             <i data-lucide="code" class="w-3.5 h-3.5"></i>
             <span>Raw Markdown</span>
           </button>
+        </div>
+
+        <!-- Center: File Selector (NEW) -->
+        <div id="file-selector-container" class="hidden sm:flex items-center ml-4 flex-1 max-w-xs">
+          <select id="result-file-selector" class="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full p-1.5 px-3">
+          </select>
         </div>
 
         <!-- Right: Actions (Copy & Download) -->
@@ -335,7 +344,6 @@
     const fileNameEl = document.getElementById('file-name');
     const fileSizeEl = document.getElementById('file-size');
     const fileIconContainer = document.getElementById('file-icon-container');
-    const fileIcon = document.getElementById('file-icon');
     const removeFileBtn = document.getElementById('remove-file-btn');
     const convertBtn = document.getElementById('convert-btn');
     const convertBtnText = document.getElementById('convert-btn-text');
@@ -344,6 +352,8 @@
     const resultsWorkspace = document.getElementById('results-workspace');
     const tabPreviewBtn = document.getElementById('tab-preview-btn');
     const tabRawBtn = document.getElementById('tab-raw-btn');
+    const fileSelectorContainer = document.getElementById('file-selector-container');
+    const fileSelector = document.getElementById('result-file-selector');
     const panePreview = document.getElementById('pane-preview');
     const paneRaw = document.getElementById('pane-raw');
     const rawMarkdownCode = document.getElementById('raw-markdown-code');
@@ -361,9 +371,9 @@
     const statusText = document.getElementById('status-text');
 
     // State Variables
-    let selectedFile = null;
-    let convertedMarkdown = '';
-    let convertedFilename = 'document.md';
+    let selectedFiles = [];
+    let convertedResults = [];
+    let currentPreviewIndex = 0;
 
     // 1. Check API Health on Startup
     async function checkApiHealth() {
@@ -404,15 +414,14 @@
 
     dropzone.addEventListener('drop', (e) => {
       const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files && files.length > 0) {
-        handleFileSelect(files[0]);
+      if (dt.files && dt.files.length > 0) {
+        handleFileSelect(Array.from(dt.files));
       }
     });
 
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
-        handleFileSelect(e.target.files[0]);
+        handleFileSelect(Array.from(e.target.files));
       }
     });
 
@@ -421,26 +430,52 @@
       resetFileSelection();
     });
 
-    function handleFileSelect(file) {
+    function handleFileSelect(files) {
       hideError();
-      const ext = file.name.split('.').pop().toLowerCase();
-      if (!['docx', 'pptx', 'pdf'].includes(ext)) {
-        showError(`Unsupported file format '.${ext}'. Please select a .docx, .pptx, or .pdf file.`);
+      const validFiles = [];
+      let totalSize = 0;
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['docx', 'pptx', 'pdf'].includes(ext)) {
+          showError(`Unsupported file format '.${ext}' skipped.`);
+          continue;
+        }
+        validFiles.push(file);
+        totalSize += file.size;
+      }
+
+      if (validFiles.length === 0) return;
+
+      const MAX_TOTAL_BYTES = 100 * 1024 * 1024; // 104,857,600 bytes
+      if (totalSize > MAX_TOTAL_BYTES) {
+        showError(`Total payload size exceeds 100 MB limit (${formatBytes(totalSize)}). Please select fewer files.`);
         return;
       }
 
-      selectedFile = file;
-      fileNameEl.textContent = file.name;
-      fileSizeEl.textContent = formatBytes(file.size);
+      // Add newly selected files to existing selection
+      selectedFiles = validFiles;
 
-      // Customize icon & color by file type
-      if (ext === 'docx') {
-        fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shadow-inner';
-      } else if (ext === 'pptx') {
-        fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shadow-inner';
-      } else if (ext === 'pdf') {
-        fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shadow-inner';
+      if (selectedFiles.length === 1) {
+          fileNameEl.textContent = selectedFiles[0].name;
+          const ext = selectedFiles[0].name.split('.').pop().toLowerCase();
+          if (ext === 'docx') {
+            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shadow-inner';
+            document.getElementById('file-icon').setAttribute('data-lucide', 'file-text');
+          } else if (ext === 'pptx') {
+            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shadow-inner';
+            document.getElementById('file-icon').setAttribute('data-lucide', 'presentation');
+          } else if (ext === 'pdf') {
+            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shadow-inner';
+            document.getElementById('file-icon').setAttribute('data-lucide', 'file');
+          }
+      } else {
+          fileNameEl.textContent = `${selectedFiles.length} files selected`;
+          fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center shadow-inner';
+          document.getElementById('file-icon').setAttribute('data-lucide', 'files');
       }
+      fileSizeEl.textContent = formatBytes(totalSize);
+      lucide.createIcons();
 
       emptyState.classList.add('hidden');
       fileState.classList.remove('hidden');
@@ -448,7 +483,7 @@
     }
 
     function resetFileSelection() {
-      selectedFile = null;
+      selectedFiles = [];
       fileInput.value = '';
       emptyState.classList.remove('hidden');
       fileState.classList.add('hidden');
@@ -466,13 +501,15 @@
 
     // 3. Conversion API Trigger
     convertBtn.addEventListener('click', async () => {
-      if (!selectedFile) return;
+      if (!selectedFiles || selectedFiles.length === 0) return;
 
       hideError();
       setLoadingState(true);
 
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      for (const file of selectedFiles) {
+        formData.append('files', file);
+      }
 
       try {
         const response = await fetch('/v1/convert', {
@@ -486,8 +523,24 @@
           throw new Error(data.message || data.error || `Server error (${response.status})`);
         }
 
-        // Conversion success
-        convertedMarkdown = data.markdown || '';
+        convertedResults = data.results || [];
+        if (convertedResults.length === 0) throw new Error("No results returned.");
+        
+        currentPreviewIndex = 0;
+        
+        fileSelector.innerHTML = '';
+        convertedResults.forEach((res, idx) => {
+            const option = document.createElement('option');
+            option.value = idx;
+            option.textContent = res.status === 'success' ? res.filename : `⚠️ ${res.filename} (Failed)`;
+            fileSelector.appendChild(option);
+        });
+
+        if (convertedResults.length > 1) {
+            if (fileSelectorContainer) fileSelectorContainer.classList.remove('hidden');
+        } else {
+            if (fileSelectorContainer) fileSelectorContainer.classList.add('hidden');
+        }
 
         renderResults();
       } catch (err) {
@@ -497,10 +550,15 @@
       }
     });
 
+    fileSelector.addEventListener('change', (e) => {
+        currentPreviewIndex = parseInt(e.target.value, 10);
+        renderResults();
+    });
+
     function setLoadingState(loading) {
       if (loading) {
         convertBtn.disabled = true;
-        convertBtnText.textContent = 'Converting Document...';
+        convertBtnText.textContent = 'Converting...';
         convertBtnSpinner.classList.remove('hidden');
       } else {
         convertBtn.disabled = false;
@@ -511,11 +569,17 @@
 
     // 4. Render Markdown Output
     function renderResults() {
-      // Render Formatted HTML via Marked.js
-      panePreview.innerHTML = marked.parse(convertedMarkdown);
+      if (!convertedResults || convertedResults.length === 0) return;
       
-      // Render Raw Code
-      rawMarkdownCode.textContent = convertedMarkdown;
+      const currentResult = convertedResults[currentPreviewIndex];
+      
+      if (currentResult.status === 'success') {
+          panePreview.innerHTML = marked.parse(currentResult.markdown || '');
+          rawMarkdownCode.textContent = currentResult.markdown || '';
+      } else {
+          panePreview.innerHTML = `<div class="text-rose-400 p-4 border border-rose-500/30 bg-rose-500/10 rounded-xl">Error converting ${currentResult.filename}: ${currentResult.error}</div>`;
+          rawMarkdownCode.textContent = `Error: ${currentResult.error}`;
+      }
 
       resultsWorkspace.classList.remove('hidden');
       resultsWorkspace.scrollIntoView({ behavior: 'smooth' });
@@ -540,10 +604,12 @@
 
     // 6. Copy Markdown Action
     copyBtn.addEventListener('click', async () => {
-      if (!convertedMarkdown) return;
+      if (!convertedResults || convertedResults.length === 0) return;
+      const currentResult = convertedResults[currentPreviewIndex];
+      if (currentResult.status !== 'success') return;
 
       try {
-        await navigator.clipboard.writeText(convertedMarkdown);
+        await navigator.clipboard.writeText(currentResult.markdown);
         copyBtnText.textContent = 'Copied!';
         copyBtnIcon.setAttribute('data-lucide', 'check');
         lucide.createIcons();
@@ -562,7 +628,6 @@
     function downloadMarkdownFile(markdownString, originalFilename) {
       if (!markdownString) return;
 
-      // 1. Derive filename (e.g., "sample.docx" -> "sample.md")
       let baseName = originalFilename || 'converted_document';
       const lastDotIndex = baseName.lastIndexOf('.');
       if (lastDotIndex > 0) {
@@ -570,39 +635,83 @@
       }
       const filename = `${baseName}.md`;
 
-      // 2. Create Blob from raw markdown string
       const blob = new Blob([markdownString], { type: 'text/markdown;charset=utf-8' });
-
-      // 3. Generate a temporary Object URL
       const url = URL.createObjectURL(blob);
-
-      // 4. Create hidden anchor element and assign download attribute
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', filename); // Use setAttribute for cross-browser safety
-
-      // 5. Trigger browser download dialog
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-
-      // 6. DELAYED Memory and DOM Cleanup (FIX FOR BLOB REVOCATION BUG)
+      
       setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
-        }
+        if (document.body.contains(link)) document.body.removeChild(link);
         URL.revokeObjectURL(url);
-      }, 200); // 200ms delay gives the browser time to initialize the file download
-
+      }, 200);
     }
 
-    downloadBtn.addEventListener('click', () => {
-      const originalName = selectedFile ? selectedFile.name : 'converted_document';
-      downloadMarkdownFile(convertedMarkdown, originalName);
+    downloadBtn.addEventListener('click', async () => {
+      if (!convertedResults || convertedResults.length === 0) return;
+
+      const successfulResults = convertedResults.filter(r => r.status === 'success');
+      if (successfulResults.length === 0) {
+          showError("No successful conversions to download.");
+          return;
+      }
+
+      if (successfulResults.length === 1) {
+          const res = successfulResults[0];
+          downloadMarkdownFile(res.markdown, res.filename);
+      } else {
+          try {
+              downloadBtn.disabled = true;
+              const originalContent = downloadBtn.innerHTML;
+              downloadBtn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Zipping...</span>`;
+              lucide.createIcons();
+
+              const zip = new JSZip();
+              successfulResults.forEach(res => {
+                  let baseName = res.filename || 'converted_document';
+                  const lastDotIndex = baseName.lastIndexOf('.');
+                  if (lastDotIndex > 0) {
+                      baseName = baseName.substring(0, lastDotIndex);
+                  }
+                  // Prevent duplicate filenames in zip
+                  let filename = `${baseName}.md`;
+                  let counter = 1;
+                  while (zip.file(filename)) {
+                      filename = `${baseName}_${counter}.md`;
+                      counter++;
+                  }
+                  zip.file(filename, res.markdown);
+              });
+
+              const content = await zip.generateAsync({type:"blob"});
+              const url = URL.createObjectURL(content);
+              
+              const link = document.createElement('a');
+              link.href = url;
+              link.setAttribute('download', 'converted_markdown_files.zip');
+              
+              document.body.appendChild(link);
+              link.click();
+              
+              setTimeout(() => {
+                  if (document.body.contains(link)) {
+                      document.body.removeChild(link);
+                  }
+                  URL.revokeObjectURL(url);
+              }, 200);
+
+              downloadBtn.disabled = false;
+              downloadBtn.innerHTML = originalContent;
+              lucide.createIcons();
+          } catch (err) {
+              downloadBtn.disabled = false;
+              showError("Failed to generate ZIP archive.");
+          }
+      }
     });
 
-
-
-    // Error Toast Controls
     function showError(message) {
       toastErrorMessage.textContent = message;
       toastError.classList.remove('hidden');
