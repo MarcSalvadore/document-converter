@@ -1,0 +1,18 @@
+# Docker build ignore patterns
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+.vscode/
+.idea/
+test_files/
+test_*.py
+*.log
