@@ -1,12 +1,18 @@
-python-docx>=1.1.0
-python-pptx>=0.6.23
-pypdf>=4.0.0
-pdfminer.six>=20221105
-pdfplumber>=0.10.0
-typer[all]>=0.9.0
-rich>=13.0.0
-fastapi>=0.100.0
-uvicorn[standard]>=0.22.0
-python-multipart>=0.0.6
-httpx>=0.24.0
+# --- Document Parsers ---
+python-docx>=1.1.0          # For parsing Microsoft Word (.docx) documents
+python-pptx>=0.6.23         # For parsing PowerPoint (.pptx) presentations
+pypdf>=4.0.0                # Core PDF processing library
+pdfminer.six>=20221105      # Required for PDF layout analysis
+pdfplumber>=0.10.0          # Advanced PDF parsing (tables and text extraction)
 
+# --- CLI & Terminal UI ---
+typer[all]>=0.9.0           # For building the command-line interface
+rich>=13.0.0                # For rich terminal output and progress indicators
+
+# --- REST API & Web Server ---
+fastapi>=0.100.0            # Core framework for the REST API
+uvicorn[standard]>=0.22.0   # High-performance ASGI server for FastAPI
+python-multipart>=0.0.6     # Required by FastAPI for handling file uploads
+
+# --- HTTP Client ---
+httpx>=0.24.0               # Async HTTP client (used by FastAPI TestClient)
