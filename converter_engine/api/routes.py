@@ -1,7 +1,8 @@
 """API Endpoints for Document to Markdown Conversion and System Health."""
 
+import asyncio
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import JSONResponse, Response
 
@@ -39,83 +40,86 @@ async def health_check() -> Dict[str, Any]:
     include_in_schema=False,
 )
 async def convert_document(
-    file: UploadFile = File(...),
-    download: bool = Query(False, description="If true, returns direct .md file attachment response"),
+    files: List[UploadFile] = File(...),
+    download: bool = Query(False, description="If true, returns direct .md file attachment response for the first successful file"),
 ):
     """Accept multipart document upload (DOCX, PPTX, PDF) and return Markdown content or file download.
 
     Args:
-        file: Multipart file object.
-        download: Optional query parameter to return attachment response.
+        files: List of multipart file objects.
+        download: Optional query parameter to return attachment response for the first file.
 
     Returns:
         JSON response with markdown string, OR direct Response attachment.
     """
-    if not file.filename:
+    if not files:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file must have a valid filename.",
+            detail="No files uploaded.",
         )
 
-    # Validate file extension
-    ext = ""
-    if "." in file.filename:
-        ext = f".{file.filename.rsplit('.', 1)[-1].lower()}"
+    results = []
 
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Unsupported file extension '{ext}'. "
-                f"Allowed extensions: {sorted(list(ALLOWED_EXTENSIONS))}"
-            ),
-        )
+    for file in files:
+        if not file.filename:
+            results.append({"filename": "unknown", "status": "error", "error": "Uploaded file must have a valid filename."})
+            continue
 
-    try:
-        raw_bytes = await file.read()
-        if not raw_bytes:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Uploaded file payload is empty.",
+        # Validate file extension
+        ext = ""
+        if "." in file.filename:
+            ext = f".{file.filename.rsplit('.', 1)[-1].lower()}"
+
+        if ext not in ALLOWED_EXTENSIONS:
+            results.append({"filename": file.filename, "status": "error", "error": f"Unsupported file extension '{ext}'. Allowed extensions: {sorted(list(ALLOWED_EXTENSIONS))}"})
+            continue
+
+        try:
+            await file.seek(0)
+            raw_bytes = await file.read()
+            if not raw_bytes:
+                results.append({"filename": file.filename, "status": "error", "error": "Uploaded file payload is empty."})
+                continue
+
+            document_router = DocumentRouter()
+            markdown_output = await asyncio.to_thread(
+                document_router.convert_bytes,
+                raw_bytes,
+                file.filename,
             )
 
-        document_router = DocumentRouter()
-        markdown_output = document_router.convert_bytes(
-            file_bytes=raw_bytes,
-            filename=file.filename,
-        )
+            results.append({
+                "filename": file.filename,
+                "status": "success",
+                "markdown": markdown_output,
+            })
 
-        derived_name = file.filename.rsplit('.', 1)[0] if '.' in file.filename else file.filename
-        md_filename = f"{derived_name}.md"
+        except Exception as e:
+            results.append({
+                "filename": file.filename,
+                "status": "error",
+                "error": str(e),
+            })
+        finally:
+            await file.close()
 
-        if download:
-            return Response(
-                content=markdown_output,
-                media_type="text/markdown; charset=utf-8",
-                headers={"Content-Disposition": f'attachment; filename="{md_filename}"'},
-            )
-
-        return {
-            "filename": file.filename,
-            "content_type": file.content_type or "application/octet-stream",
-            "markdown": markdown_output,
-        }
-
-    except ValueError as ve:
+    if download:
+        # Backward compatibility for direct file download
+        for res in results:
+            if res["status"] == "success":
+                derived_name = res["filename"].rsplit('.', 1)[0] if '.' in res["filename"] else res["filename"]
+                md_filename = f"{derived_name}.md"
+                return Response(
+                    content=res["markdown"],
+                    media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{md_filename}"'},
+                )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve),
+            detail="No files were successfully converted for download.",
         )
-    except FileNotFoundError as fnfe:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(fnfe),
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during document conversion: {str(e)}",
-        )
+
+    return {"results": results}
 
 
 @router.post(
@@ -124,6 +128,6 @@ async def convert_document(
     tags=["Conversion"],
     status_code=status.HTTP_200_OK,
 )
-async def convert_document_to_file(file: UploadFile = File(...)):
-    """Accept multipart document upload and return direct .md file attachment."""
-    return await convert_document(file=file, download=True)
+async def convert_document_to_file(files: List[UploadFile] = File(...)):
+    """Accept multipart document upload and return direct .md file attachment for the first file."""
+    return await convert_document(files=files, download=True)
