@@ -6,13 +6,13 @@ from typing import BinaryIO, Union
 from bs4 import BeautifulSoup
 import markdownify
 
-from converter_engine.parsers import BaseParser
+from converter_engine.parsers import BaseParser, ParsedDocumentResult
 
 
 class HTMLParser(BaseParser):
     """Parser for extracting Markdown from HTML files."""
 
-    def parse(self, source: Union[str, bytes, BinaryIO]) -> str:
+    def parse(self, source: Union[str, bytes, BinaryIO]) -> ParsedDocumentResult:
         """Parse HTML document and return raw Markdown representation.
 
         Args:
@@ -61,6 +61,6 @@ class HTMLParser(BaseParser):
             # Convert to markdown
             md = markdownify.markdownify(soup_str, heading_style="ATX", strip=['a'])
             
-            return md.strip()
+            return ParsedDocumentResult(markdown=md.strip(), images={})
         except Exception as e:
             raise ValueError(f"Failed to parse HTML content: {e}") from e

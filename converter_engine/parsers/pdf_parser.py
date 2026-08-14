@@ -8,20 +8,22 @@ import pdfplumber
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTChar, LTTextContainer, LTAnno
 
-from converter_engine.parsers import BaseParser
+from PIL import Image
+
+from converter_engine.parsers import BaseParser, ParsedDocumentResult
 
 
 class PDFParser(BaseParser):
     """Permissively licensed PDF Parser using pdfplumber & pdfminer.six."""
 
-    def parse(self, source: Union[str, bytes, BinaryIO]) -> str:
+    def parse(self, source: Union[str, bytes, BinaryIO]) -> ParsedDocumentResult:
         """Parse PDF document into Markdown.
 
         Args:
             source: File path (str), raw bytes, or file-like binary stream.
 
         Returns:
-            Markdown formatted representation of the PDF content.
+            ParsedDocumentResult containing Markdown formatted representation of the PDF content and extracted images.
         """
         try:
             if isinstance(source, str):
@@ -41,22 +43,23 @@ class PDFParser(BaseParser):
                 font_thresholds = self._calculate_font_thresholds(pdf)
 
 
-                # 2. Extract page contents (text lines + tables)
+                # 2. Extract page contents (text lines + tables + images)
                 page_markdowns: List[str] = []
+                extracted_images: Dict[str, bytes] = {}
                 total_chars_found = 0
 
                 for page_num, page in enumerate(pdf.pages, start=1):
                     chars = page.chars
                     total_chars_found += len(chars)
 
-                    page_md = self._parse_page(page, font_thresholds)
+                    page_md = self._parse_page(page, page_num, font_thresholds, extracted_images)
                     if page_md.strip():
                         page_markdowns.append(page_md)
 
                 if total_chars_found == 0:
-                    return "[Scanned or Image-Only PDF: No selectable text detected]"
+                    return ParsedDocumentResult(markdown="[Scanned or Image-Only PDF: No selectable text detected]", images={})
 
-                return "\n\n---\n\n".join(page_markdowns)
+                return ParsedDocumentResult(markdown="\n\n---\n\n".join(page_markdowns), images=extracted_images)
 
         except FileNotFoundError:
             raise
@@ -96,8 +99,8 @@ class PDFParser(BaseParser):
             "h3": h3_thresh,
         }
 
-    def _parse_page(self, page: pdfplumber.page.Page, font_thresholds: Dict[str, float]) -> str:
-        """Parse individual PDF page combining text layout and extracted tables."""
+    def _parse_page(self, page: pdfplumber.page.Page, page_num: int, font_thresholds: Dict[str, float], extracted_images: Dict[str, bytes]) -> str:
+        """Parse individual PDF page combining text layout, extracted tables, and images."""
         # Find tables on the page
         tables = page.find_tables()
         table_bboxes = [t.bbox for t in tables]
@@ -112,6 +115,28 @@ class PDFParser(BaseParser):
             table_md = self._format_table(table_data)
             if table_md:
                 elements.append((top, "table", table_md))
+
+        # Extract images
+        for img_idx, img in enumerate(page.images, start=1):
+            top = img.get("top", 0)
+            try:
+                # pdfplumber exposes stream dictionary and base streams
+                # To simplify without writing a complex parser, let's extract via PIL if available
+                # NOTE: pdfplumber's page.images has bounding box. 
+                # A robust way is cropping the page if we want the actual rendered image, but it rasterizes.
+                # Since we want the raw image, we can just rasterize the bounding box as a fallback
+                # or attempt to pull from img stream. For simplicity, we'll rasterize the crop.
+                bbox = (img["x0"], img["top"], img["x1"], img["bottom"])
+                if bbox[2] > bbox[0] and bbox[3] > bbox[1]:
+                    cropped = page.crop(bbox)
+                    pil_img = cropped.to_image(resolution=150).original
+                    img_bytes = io.BytesIO()
+                    pil_img.save(img_bytes, format="PNG")
+                    filename = f"assets/page_{page_num}_img_{img_idx}.png"
+                    extracted_images[filename] = img_bytes.getvalue()
+                    elements.append((top, "image", f"![Page {page_num} Image {img_idx}]({filename})"))
+            except Exception:
+                pass
 
         # Extract text chars outside table bboxes
         chars_outside_tables = []

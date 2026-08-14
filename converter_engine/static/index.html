@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Document to Markdown Converter</title>
-  <meta name="description" content="Convert DOCX, PPTX, and PDF documents into clean, structured Markdown in real-time." />
+  <title>Doc-to-Markdown & Offline Data Masking</title>
+  <meta name="description" content="Convert documents to clean Markdown and perform offline data redaction." />
   
   <!-- Google Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -35,185 +35,104 @@
       }
     }
   </script>
-
+  
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
-
   <!-- Marked.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
   <!-- JSZip CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
     /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-    /* Markdown Render Styling */
-    .markdown-body {
-      color: #cbd5e1;
-      line-height: 1.7;
-    }
-    .markdown-body h1 {
-      font-size: 1.875rem;
-      font-weight: 700;
-      color: #f8fafc;
-      margin-top: 1.5rem;
-      margin-bottom: 0.75rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid #334155;
-    }
-    .markdown-body h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #f1f5f9;
-      margin-top: 1.25rem;
-      margin-bottom: 0.5rem;
-    }
-    .markdown-body h3 {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #e2e8f0;
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
-    }
-    .markdown-body p {
-      margin-bottom: 1rem;
-    }
-    .markdown-body ul {
-      list-style-type: disc;
-      padding-left: 1.5rem;
-      margin-bottom: 1rem;
-    }
-    .markdown-body ol {
-      list-style-type: decimal;
-      padding-left: 1.5rem;
-      margin-bottom: 1rem;
-    }
-    .markdown-body li {
-      margin-bottom: 0.25rem;
-    }
-    .markdown-body blockquote {
-      border-left: 4px solid #6366f1;
-      padding-left: 1rem;
-      color: #94a3b8;
-      font-style: italic;
-      margin-bottom: 1rem;
-    }
-    .markdown-body table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    .markdown-body th, .markdown-body td {
-      border: 1px solid #334155;
-      padding: 0.625rem 0.875rem;
-      text-align: left;
-    }
-    .markdown-body th {
-      background-color: #1e293b;
-      color: #f8fafc;
-      font-weight: 600;
-    }
-    .markdown-body td {
-      background-color: #0f172a;
-    }
-    .markdown-body code {
-      background-color: #1e293b;
-      color: #818cf8;
-      padding: 0.2rem 0.4rem;
-      border-radius: 0.25rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.875em;
-    }
-    .markdown-body pre {
-      background-color: #020617;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      overflow-x: auto;
-      margin-bottom: 1rem;
-      border: 1px solid #1e293b;
-    }
-    .markdown-body pre code {
-      background-color: transparent;
-      padding: 0;
-      color: #e2e8f0;
-    }
-    .markdown-body hr {
-      border: 0;
-      height: 1px;
-      background: #334155;
-      margin: 1.5rem 0;
-    }
+    /* Markdown Body Styling */
+    .markdown-body { color: #cbd5e1; line-height: 1.7; }
+    .markdown-body h1 { font-size: 1.875rem; font-weight: 700; color: #f8fafc; margin-top: 1.5rem; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #334155; }
+    .markdown-body h2 { font-size: 1.5rem; font-weight: 600; color: #f1f5f9; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+    .markdown-body h3 { font-size: 1.25rem; font-weight: 600; color: #e2e8f0; margin-top: 1rem; margin-bottom: 0.5rem; }
+    .markdown-body p { margin-bottom: 1rem; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .markdown-body li { margin-bottom: 0.25rem; }
+    .markdown-body blockquote { border-left: 4px solid #6366f1; padding-left: 1rem; color: #94a3b8; font-style: italic; margin-bottom: 1rem; }
+    .markdown-body table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1.5rem; }
+    .markdown-body th, .markdown-body td { border: 1px solid #334155; padding: 0.625rem 0.875rem; text-align: left; }
+    .markdown-body th { background-color: #1e293b; color: #f8fafc; font-weight: 600; }
+    .markdown-body td { background-color: #0f172a; }
+    .markdown-body code { background-color: #1e293b; color: #818cf8; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+    .markdown-body pre { background-color: #020617; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; border: 1px solid #1e293b; }
+    .markdown-body pre code { background-color: transparent; padding: 0; color: #e2e8f0; }
+    .markdown-body hr { border: 0; height: 1px; background: #334155; margin: 1.5rem 0; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white flex flex-col">
 
-  <!-- Navigation Bar -->
-  <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
+  <!-- Main Navigation Bar -->
+  <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <!-- Logo & Title -->
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
-          <i data-lucide="file-text" class="w-5 h-5 text-white"></i>
+      
+      <!-- Brand & Navigation Pills -->
+      <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+            <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg text-white leading-tight flex items-center space-x-2">
+              <span>DocEngine</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">v1.2</span>
+            </h1>
+            <p class="text-xs text-slate-400">Conversion & Data Masking Suite</p>
+          </div>
         </div>
-        <div>
-          <h1 class="font-bold text-lg text-white leading-tight flex items-center space-x-2">
-            <span>Doc-to-Markdown</span>
-            <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20 font-medium">v1.0</span>
-          </h1>
-          <p class="text-xs text-slate-400">DOCX, PPTX & PDF Converter Engine</p>
-        </div>
+
+        <!-- App Switcher Nav Tabs -->
+        <nav class="flex items-center p-1 bg-slate-950/80 rounded-xl border border-slate-800">
+          <button id="nav-masking-btn" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all">
+            <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+            <span>Data Masking</span>
+          </button>
+          <button id="nav-converter-btn" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>Converter</span>
+          </button>
+        </nav>
       </div>
 
-      <!-- Format Badges & API Status -->
+      <!-- Format Badges & Live Status -->
       <div class="flex items-center space-x-4">
-        <!-- Formats Supported -->
-        <div class="hidden sm:flex items-center space-x-1.5 text-xs text-slate-400 font-medium bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
+        <div class="hidden lg:flex items-center space-x-1.5 text-xs text-slate-400 font-medium bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
           <span>Supported:</span>
           <span class="text-blue-400 font-mono">.docx</span>
-          <span class="text-slate-600">•</span>
           <span class="text-amber-400 font-mono">.pptx</span>
-          <span class="text-slate-600">•</span>
           <span class="text-rose-400 font-mono">.pdf</span>
-          <span class="text-slate-600">•</span>
           <span class="text-emerald-400 font-mono">.xlsx</span>
-          <span class="text-slate-600">•</span>
           <span class="text-teal-400 font-mono">.csv</span>
-          <span class="text-slate-600">•</span>
           <span class="text-orange-400 font-mono">.html</span>
         </div>
 
-        <!-- API Health Status -->
+        <!-- API Health Pill -->
         <div id="api-status" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-medium text-slate-400">
           <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
           <span id="status-text">Checking API...</span>
         </div>
       </div>
+
     </div>
   </header>
 
-  <!-- Error Banner / Notification -->
-  <div id="toast-error" class="hidden max-w-7xl mx-auto px-4 mt-4">
+  <!-- Error / Alert Toast -->
+  <div id="toast-error" class="hidden max-w-7xl mx-auto px-4 mt-4 w-full">
     <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 flex items-start justify-between text-rose-300">
       <div class="flex items-start space-x-3">
         <i data-lucide="alert-circle" class="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0"></i>
         <div>
-          <h4 class="font-semibold text-sm text-rose-200">Conversion Error</h4>
+          <h4 class="font-semibold text-sm text-rose-200">Notice / Error</h4>
           <p id="toast-error-message" class="text-xs text-rose-300/90 mt-0.5">Something went wrong.</p>
         </div>
       </div>
@@ -223,517 +142,648 @@
     </div>
   </div>
 
-  <!-- Main Container -->
+  <!-- Main Content Viewport -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
-    
-    <!-- Upload Dropzone Section -->
-    <section class="max-w-3xl mx-auto">
-      <div id="dropzone" class="relative group border-2 border-dashed border-slate-800 hover:border-brand-500/60 bg-slate-900/40 hover:bg-slate-900/80 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 shadow-xl shadow-slate-950/50">
-        <input type="file" id="file-input" accept=".docx,.pptx,.pdf,.xlsx,.csv,.html,.htm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple />
 
-        <div id="dropzone-empty-state" class="flex flex-col items-center justify-center space-y-4">
-          <div class="w-16 h-16 rounded-2xl bg-slate-800/80 group-hover:bg-brand-500/10 group-hover:text-brand-400 text-slate-400 flex items-center justify-center transition-colors duration-200 shadow-inner">
-            <i data-lucide="upload-cloud" class="w-8 h-8"></i>
-          </div>
-          <div>
-            <h3 class="text-base sm:text-lg font-semibold text-slate-200 group-hover:text-white">
-              Drag & Drop your document here
-            </h3>
-            <p class="text-xs sm:text-sm text-slate-400 mt-1">
-              or <span class="text-brand-400 font-medium hover:underline">browse files</span> from your computer
-            </p>
-          </div>
-          <div class="flex items-center space-x-2 text-xs text-slate-500 pt-2">
-            <span>Supports DOCX, PPTX, PDF, XLSX, CSV, HTML</span>
-            <span>•</span>
-            <span>Up to 100MB</span>
-          </div>
-        </div>
-
-        <!-- Selected File State (Hidden by default) -->
-        <div id="dropzone-file-state" class="hidden flex flex-col items-center justify-center space-y-4">
-          <div id="file-icon-container" class="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shadow-inner">
-            <i id="file-icon" data-lucide="file" class="w-8 h-8"></i>
-          </div>
-          <div>
-            <h4 id="file-name" class="font-semibold text-slate-100 text-base max-w-md truncate">document.docx</h4>
-            <p id="file-size" class="text-xs text-slate-400 mt-0.5">1.2 MB</p>
-          </div>
-          <button type="button" id="remove-file-btn" class="z-20 text-xs font-medium text-slate-400 hover:text-rose-400 transition-colors flex items-center space-x-1">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            <span>Remove file</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Action Button -->
-      <div class="mt-6 flex justify-center">
-        <button id="convert-btn" disabled class="disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-brand-500/25 transition-all duration-200 flex items-center justify-center space-x-2">
-          <i data-lucide="sparkles" class="w-5 h-5"></i>
-          <span id="convert-btn-text">Convert to Markdown</span>
-          <div id="convert-btn-spinner" class="hidden animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
-        </button>
-      </div>
-    </section>
-
-    <!-- Workspace Results Section (Hidden until conversion) -->
-    <section id="results-workspace" class="hidden space-y-4">
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: DOCUMENT TO MARKDOWN CONVERTER                                    -->
+    <!-- ========================================================================= -->
+    <div id="view-converter" class="space-y-8">
       
-      <!-- Toolbar Controls -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+      <!-- Dropzone -->
+      <section class="max-w-3xl mx-auto">
+        <div id="conv-dropzone" class="relative group border-2 border-dashed border-slate-800 hover:border-brand-500/60 bg-slate-900/40 hover:bg-slate-900/80 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 shadow-xl shadow-slate-950/50">
+          <input type="file" id="conv-file-input" accept=".docx,.pptx,.pdf,.xlsx,.csv,.html,.htm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple />
+          
+          <div id="conv-empty-state" class="flex flex-col items-center justify-center space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-slate-800/80 group-hover:bg-brand-500/10 group-hover:text-brand-400 text-slate-400 flex items-center justify-center transition-colors duration-200 shadow-inner">
+              <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <h3 class="text-base sm:text-lg font-semibold text-slate-200 group-hover:text-white">
+                Drag & Drop your document here
+              </h3>
+              <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                or <span class="text-brand-400 font-medium hover:underline">browse files</span> from your computer
+              </p>
+            </div>
+            <div class="flex items-center space-x-2 text-xs text-slate-500 pt-2">
+              <span>Supports DOCX, PPTX, PDF, XLSX, CSV, HTML</span>
+              <span>•</span>
+              <span>Max 100 MB total</span>
+            </div>
+          </div>
+
+          <!-- File Selected Preview -->
+          <div id="conv-file-state" class="hidden flex flex-col items-center justify-center space-y-4">
+            <div id="conv-file-icon-container" class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center shadow-inner">
+              <i id="conv-file-icon" data-lucide="file-text" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <h4 id="conv-file-name" class="font-semibold text-slate-100 text-base max-w-md truncate">document.docx</h4>
+              <p id="conv-file-size" class="text-xs text-slate-400 mt-0.5">1.2 MB</p>
+            </div>
+            <button type="button" id="conv-remove-file-btn" class="z-20 text-xs font-medium text-slate-400 hover:text-rose-400 transition-colors flex items-center space-x-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Remove selection</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CTA Convert Button -->
+        <div class="mt-6 flex justify-center">
+          <button id="convert-btn" disabled class="disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-brand-500/25 transition-all duration-200 flex items-center justify-center space-x-2">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+            <span id="convert-btn-text">Convert to Markdown</span>
+            <div id="convert-btn-spinner" class="hidden animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Results Workspace -->
+      <section id="conv-results-workspace" class="hidden space-y-4">
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+          
+          <!-- Left Tabs -->
+          <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <button id="conv-tab-preview-btn" class="px-4 py-1.5 rounded-md text-xs font-medium bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              <span>Formatted Preview</span>
+            </button>
+            <button id="conv-tab-raw-btn" class="px-4 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all">
+              <i data-lucide="code" class="w-3.5 h-3.5"></i>
+              <span>Raw Markdown</span>
+            </button>
+          </div>
+
+          <!-- File Selector Dropdown -->
+          <div id="conv-file-selector-container" class="hidden sm:flex items-center ml-4 flex-1 max-w-xs">
+            <select id="conv-file-selector" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full p-2">
+            </select>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center space-x-2">
+            <button id="conv-copy-btn" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1.5 transition-all">
+              <i id="conv-copy-icon" data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span id="conv-copy-text">Copy Markdown</span>
+            </button>
+            <button id="conv-download-btn" class="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium flex items-center space-x-1.5 shadow-md transition-all">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Download .md</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Render Viewports -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl min-h-[400px]">
+          <div id="conv-pane-preview" class="p-6 sm:p-8 markdown-body overflow-y-auto max-h-[700px]"></div>
+          <div id="conv-pane-raw" class="hidden p-6 bg-slate-950 overflow-x-auto max-h-[700px]">
+            <pre><code id="conv-raw-code" class="text-xs sm:text-sm font-mono text-slate-300 leading-relaxed"></code></pre>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: OFFLINE DATA MASKING & REDACTION                                 -->
+    <!-- ========================================================================= -->
+    <div id="view-masking" class="hidden space-y-8">
+      
+      <div class="max-w-4xl mx-auto space-y-6">
         
-        <!-- Left: Tab Selectors -->
-        <div class="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800/80">
-          <button id="tab-preview-btn" class="px-4 py-1.5 rounded-md text-xs font-medium bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all">
-            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-            <span>Formatted Preview</span>
-          </button>
-          <button id="tab-raw-btn" class="px-4 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all">
-            <i data-lucide="code" class="w-3.5 h-3.5"></i>
-            <span>Raw Markdown</span>
-          </button>
+        <!-- Masking Dropzone -->
+        <div id="mask-dropzone" class="relative group border-2 border-dashed border-slate-800 hover:border-emerald-500/60 bg-slate-900/40 hover:bg-slate-900/80 rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 shadow-xl shadow-slate-950/50">
+          <input type="file" id="mask-file-input" accept=".docx,.xlsx,.csv,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple />
+          
+          <div id="mask-empty-state" class="flex flex-col items-center justify-center space-y-3">
+            <div class="w-14 h-14 rounded-2xl bg-slate-800/80 group-hover:bg-emerald-500/10 group-hover:text-emerald-400 text-slate-400 flex items-center justify-center transition-colors duration-200 shadow-inner">
+              <i data-lucide="shield-check" class="w-7 h-7"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-semibold text-slate-200 group-hover:text-white">
+                Select Documents to Redact / Mask
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Supports DOCX, XLSX, CSV, and PDF (Max 100 MB total)
+              </p>
+            </div>
+          </div>
+
+          <div id="mask-file-state" class="hidden flex flex-col items-center justify-center space-y-3">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shadow-inner">
+              <i data-lucide="files" class="w-7 h-7"></i>
+            </div>
+            <div>
+              <h4 id="mask-file-name" class="font-semibold text-slate-100 text-base max-w-md truncate">2 files selected</h4>
+              <p id="mask-file-size" class="text-xs text-slate-400 mt-0.5">3.4 MB</p>
+            </div>
+            <button type="button" id="mask-remove-file-btn" class="z-20 text-xs font-medium text-slate-400 hover:text-rose-400 transition-colors flex items-center space-x-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Remove selection</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Center: File Selector (NEW) -->
-        <div id="file-selector-container" class="hidden sm:flex items-center ml-4 flex-1 max-w-xs">
-          <select id="result-file-selector" class="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full p-1.5 px-3">
-          </select>
+        <!-- Masking Configuration Panel -->
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
+          
+          <!-- Company List Input -->
+          <div class="space-y-2">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Custom Entity / Company Names <span class="text-slate-500 font-normal lowercase">(one per line, exact matching)</span>
+            </label>
+            <textarea id="mask-company-list" rows="3" placeholder="Astra Internasional&#10;Bank Mandiri&#10;Telkom Indonesia" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono placeholder:text-slate-600 focus:outline-none focus:border-brand-500 transition-colors"></textarea>
+          </div>
+
+          <!-- Detection Rules Checkboxes -->
+          <div class="space-y-3">
+            <span class="block text-xs font-semibold uppercase tracking-wider text-slate-300">Detection Rules</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <label class="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <input type="checkbox" id="mask-opt-company-auto" checked class="rounded bg-slate-900 border-slate-700 text-brand-600 focus:ring-0">
+                <span class="text-xs text-slate-300 font-medium">PT/CV/Tbk Auto</span>
+              </label>
+              <label class="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <input type="checkbox" id="mask-opt-npwp" checked class="rounded bg-slate-900 border-slate-700 text-brand-600 focus:ring-0">
+                <span class="text-xs text-slate-300 font-medium">NPWP Tax ID</span>
+              </label>
+              <label class="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <input type="checkbox" id="mask-opt-rekening" checked class="rounded bg-slate-900 border-slate-700 text-brand-600 focus:ring-0">
+                <span class="text-xs text-slate-300 font-medium">Bank Account</span>
+              </label>
+              <label class="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 cursor-pointer hover:border-slate-700">
+                <input type="checkbox" id="mask-opt-address" checked class="rounded bg-slate-900 border-slate-700 text-brand-600 focus:ring-0">
+                <span class="text-xs text-slate-300 font-medium">Address (Alamat)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Dual Execution Actions -->
+          <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+            <button id="mask-dryrun-btn" disabled class="disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 flex items-center justify-center space-x-2 transition-all">
+              <i data-lucide="file-search" class="w-4 h-4 text-slate-400"></i>
+              <span>Dry-Run (Inspect Matches)</span>
+            </button>
+            <button id="mask-final-btn" disabled class="disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2 transition-all">
+              <i data-lucide="lock" class="w-4 h-4"></i>
+              <span>Redact & Download</span>
+            </button>
+          </div>
+
         </div>
 
-        <!-- Right: Actions (Copy & Download) -->
-        <div class="flex items-center space-x-2">
-          <button id="copy-btn" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1.5 transition-all">
-            <i id="copy-btn-icon" data-lucide="copy" class="w-3.5 h-3.5"></i>
-            <span id="copy-btn-text">Copy Markdown</span>
-          </button>
+        <!-- Dry-Run Match Report Results Workspace -->
+        <div id="mask-report-workspace" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-100 flex items-center space-x-2">
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-emerald-400"></i>
+                <span>Detected Redaction Matches</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Review items before applying final redaction.</p>
+            </div>
+            <button id="mask-download-report-btn" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 flex items-center space-x-1.5 transition-all">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Export CSV Report</span>
+            </button>
+          </div>
 
-          <button id="download-btn" class="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium flex items-center space-x-1.5 shadow-md transition-all">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span>Download .md</span>
-          </button>
+          <!-- Report Table -->
+          <div class="border border-slate-800 rounded-xl overflow-hidden max-h-96 overflow-y-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800 sticky top-0">
+                <tr>
+                  <th class="p-3">File</th>
+                  <th class="p-3">Location</th>
+                  <th class="p-3">Type</th>
+                  <th class="p-3">Original Text</th>
+                </tr>
+              </thead>
+              <tbody id="mask-report-tbody" class="divide-y divide-slate-800/60 font-mono"></tbody>
+            </table>
+          </div>
         </div>
+
       </div>
 
-      <!-- Preview Panels -->
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl min-h-[400px]">
-        
-        <!-- Formatted Preview Pane -->
-        <div id="pane-preview" class="p-6 sm:p-8 markdown-body overflow-y-auto max-h-[700px]">
-          <!-- Rendered HTML inserted here -->
-        </div>
-
-        <!-- Raw Markdown Code Pane (Hidden by default) -->
-        <div id="pane-raw" class="hidden p-6 bg-slate-950 overflow-x-auto max-h-[700px]">
-          <pre><code id="raw-markdown-code" class="text-xs sm:text-sm font-mono text-slate-300 leading-relaxed"></code></pre>
-        </div>
-
-      </div>
-    </section>
+    </div>
 
   </main>
 
   <!-- Footer -->
   <footer class="border-t border-slate-800/60 py-6 text-center text-xs text-slate-500">
-    <p>Powered by Document-to-Markdown Engine & FastAPI REST Services</p>
+    <p>Powered by Document Converter Engine & Offline Redaction Pipeline</p>
   </footer>
 
-  <!-- Single-Page Application Client Logic -->
+  <!-- Core JavaScript Interactions -->
   <script>
-    // Initialize Lucide Icons
     lucide.createIcons();
 
-    // DOM References
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('file-input');
-    const emptyState = document.getElementById('dropzone-empty-state');
-    const fileState = document.getElementById('dropzone-file-state');
-    const fileNameEl = document.getElementById('file-name');
-    const fileSizeEl = document.getElementById('file-size');
-    const fileIconContainer = document.getElementById('file-icon-container');
-    const removeFileBtn = document.getElementById('remove-file-btn');
-    const convertBtn = document.getElementById('convert-btn');
-    const convertBtnText = document.getElementById('convert-btn-text');
-    const convertBtnSpinner = document.getElementById('convert-btn-spinner');
-    
-    const resultsWorkspace = document.getElementById('results-workspace');
-    const tabPreviewBtn = document.getElementById('tab-preview-btn');
-    const tabRawBtn = document.getElementById('tab-raw-btn');
-    const fileSelectorContainer = document.getElementById('file-selector-container');
-    const fileSelector = document.getElementById('result-file-selector');
-    const panePreview = document.getElementById('pane-preview');
-    const paneRaw = document.getElementById('pane-raw');
-    const rawMarkdownCode = document.getElementById('raw-markdown-code');
-    const copyBtn = document.getElementById('copy-btn');
-    const copyBtnIcon = document.getElementById('copy-btn-icon');
-    const copyBtnText = document.getElementById('copy-btn-text');
-    const downloadBtn = document.getElementById('download-btn');
+    // Navigation Switcher
+    const navConverterBtn = document.getElementById('nav-converter-btn');
+    const navMaskingBtn = document.getElementById('nav-masking-btn');
+    const viewConverter = document.getElementById('view-converter');
+    const viewMasking = document.getElementById('view-masking');
 
-    const toastError = document.getElementById('toast-error');
-    const toastErrorMessage = document.getElementById('toast-error-message');
-    const toastErrorClose = document.getElementById('toast-error-close');
+    navConverterBtn.addEventListener('click', () => {
+      navConverterBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all';
+      navMaskingBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all';
+      viewConverter.classList.remove('hidden');
+      viewMasking.classList.add('hidden');
+    });
 
-    const apiStatus = document.getElementById('api-status');
+    navMaskingBtn.addEventListener('click', () => {
+      navMaskingBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white shadow-sm flex items-center space-x-1.5 transition-all';
+      navConverterBtn.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all';
+      viewMasking.classList.remove('hidden');
+      viewConverter.classList.add('hidden');
+    });
+
+    // API Health Check
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
-
-    // State Variables
-    let selectedFiles = [];
-    let convertedResults = [];
-    let currentPreviewIndex = 0;
-
-    // 1. Check API Health on Startup
-    async function checkApiHealth() {
+    async function checkHealth() {
       try {
         const res = await fetch('/health');
         if (res.ok) {
-          const data = await res.json();
+          const d = await res.json();
           statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
-          statusText.textContent = `Connected (v${data.version || '1.0'})`;
+          statusText.textContent = `Connected (v${d.version || '1.0'})`;
           statusText.className = 'text-emerald-400 font-medium';
-        } else {
-          throw new Error('API returned unhealthy state');
-        }
-      } catch (err) {
+        } else { throw new Error(); }
+      } catch {
         statusDot.className = 'w-2 h-2 rounded-full bg-rose-500';
         statusText.textContent = 'API Offline';
         statusText.className = 'text-rose-400 font-medium';
       }
     }
-    checkApiHealth();
+    checkHealth();
 
-    // 2. Drag and Drop Handlers
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropzone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropzone.classList.add('border-brand-500', 'bg-brand-500/10');
-      }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropzone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropzone.classList.remove('border-brand-500', 'bg-brand-500/10');
-      }, false);
-    });
-
-    dropzone.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      if (dt.files && dt.files.length > 0) {
-        handleFileSelect(Array.from(dt.files));
-      }
-    });
-
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        handleFileSelect(Array.from(e.target.files));
-      }
-    });
-
-    removeFileBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      resetFileSelection();
-    });
-
-    function handleFileSelect(files) {
-      hideError();
-      const validFiles = [];
-      let totalSize = 0;
-
-      for (const file of files) {
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (!['docx', 'pptx', 'pdf', 'xlsx', 'csv', 'html', 'htm'].includes(ext)) {
-          showError(`Unsupported file format '.${ext}' skipped.`);
-          continue;
-        }
-        validFiles.push(file);
-        totalSize += file.size;
-      }
-
-      if (validFiles.length === 0) return;
-
-      const MAX_TOTAL_BYTES = 100 * 1024 * 1024; // 104,857,600 bytes
-      if (totalSize > MAX_TOTAL_BYTES) {
-        showError(`Total payload size exceeds 100 MB limit (${formatBytes(totalSize)}). Please select fewer files.`);
-        return;
-      }
-
-      // Add newly selected files to existing selection
-      selectedFiles = validFiles;
-
-      if (selectedFiles.length === 1) {
-          fileNameEl.textContent = selectedFiles[0].name;
-          const ext = selectedFiles[0].name.split('.').pop().toLowerCase();
-          if (ext === 'docx') {
-            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shadow-inner';
-            document.getElementById('file-icon').setAttribute('data-lucide', 'file-text');
-          } else if (ext === 'pptx') {
-            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shadow-inner';
-            document.getElementById('file-icon').setAttribute('data-lucide', 'presentation');
-          } else if (ext === 'pdf') {
-            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shadow-inner';
-            document.getElementById('file-icon').setAttribute('data-lucide', 'file');
-          } else if (ext === 'xlsx' || ext === 'csv') {
-            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shadow-inner';
-            document.getElementById('file-icon').setAttribute('data-lucide', 'table');
-          } else if (ext === 'html' || ext === 'htm') {
-            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center shadow-inner';
-            document.getElementById('file-icon').setAttribute('data-lucide', 'globe');
-          }
-      } else {
-          fileNameEl.textContent = `${selectedFiles.length} files selected`;
-          fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center shadow-inner';
-          document.getElementById('file-icon').setAttribute('data-lucide', 'files');
-      }
-      fileSizeEl.textContent = formatBytes(totalSize);
-      lucide.createIcons();
-
-      emptyState.classList.add('hidden');
-      fileState.classList.remove('hidden');
-      convertBtn.disabled = false;
-    }
-
-    function resetFileSelection() {
-      selectedFiles = [];
-      fileInput.value = '';
-      emptyState.classList.remove('hidden');
-      fileState.classList.add('hidden');
-      convertBtn.disabled = true;
-    }
-
-    function formatBytes(bytes, decimals = 2) {
+    // Helper functions
+    function formatBytes(bytes) {
       if (bytes === 0) return '0 Bytes';
-      const k = 1024;
-      const dm = decimals < 0 ? 0 : decimals;
-      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const k = 1024, dm = 2, sizes = ['Bytes', 'KB', 'MB', 'GB'];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
+    function showError(msg) {
+      document.getElementById('toast-error-message').textContent = msg;
+      document.getElementById('toast-error').classList.remove('hidden');
+    }
+    function hideError() {
+      document.getElementById('toast-error').classList.add('hidden');
+    }
+    document.getElementById('toast-error-close').addEventListener('click', hideError);
 
-    // 3. Conversion API Trigger
-    convertBtn.addEventListener('click', async () => {
-      if (!selectedFiles || selectedFiles.length === 0) return;
+    // ==========================================
+    // 1. CONVERTER VIEW LOGIC
+    // ==========================================
+    const convDropzone = document.getElementById('conv-dropzone');
+    const convFileInput = document.getElementById('conv-file-input');
+    const convEmptyState = document.getElementById('conv-empty-state');
+    const convFileState = document.getElementById('conv-file-state');
+    const convFileName = document.getElementById('conv-file-name');
+    const convFileSize = document.getElementById('conv-file-size');
+    const convRemoveBtn = document.getElementById('conv-remove-file-btn');
+    const convertBtn = document.getElementById('convert-btn');
+    const convWorkspace = document.getElementById('conv-results-workspace');
+    const convFileSelector = document.getElementById('conv-file-selector');
+    const convFileSelectorContainer = document.getElementById('conv-file-selector-container');
+    const convPanePreview = document.getElementById('conv-pane-preview');
+    const convPaneRaw = document.getElementById('conv-pane-raw');
+    const convRawCode = document.getElementById('conv-raw-code');
 
+    let convSelectedFiles = [];
+    let convResults = [];
+    let convActiveIdx = 0;
+
+    ['dragenter', 'dragover'].forEach(e => convDropzone.addEventListener(e, (ev) => { ev.preventDefault(); convDropzone.classList.add('border-brand-500', 'bg-brand-500/10'); }));
+    ['dragleave', 'drop'].forEach(e => convDropzone.addEventListener(e, (ev) => { ev.preventDefault(); convDropzone.classList.remove('border-brand-500', 'bg-brand-500/10'); }));
+    convDropzone.addEventListener('drop', (e) => { if (e.dataTransfer.files.length) handleConvFiles(Array.from(e.dataTransfer.files)); });
+    convFileInput.addEventListener('change', (e) => { if (e.target.files.length) handleConvFiles(Array.from(e.target.files)); });
+
+    function handleConvFiles(files) {
       hideError();
-      setLoadingState(true);
+      const valid = [];
+      let totalSize = 0;
+      for (const f of files) {
+        const ext = f.name.split('.').pop().toLowerCase();
+        if (['docx', 'pptx', 'pdf', 'xlsx', 'csv', 'html', 'htm'].includes(ext)) {
+          valid.push(f);
+          totalSize += f.size;
+        }
+      }
+      if (!valid.length) return showError('No supported files selected.');
+      if (totalSize > 100 * 1024 * 1024) return showError('Total size exceeds 100 MB limit.');
+      
+      convSelectedFiles = valid;
+      convFileName.textContent = valid.length === 1 ? valid[0].name : `${valid.length} files selected`;
+      convFileSize.textContent = formatBytes(totalSize);
+      convEmptyState.classList.add('hidden');
+      convFileState.classList.remove('hidden');
+      convertBtn.disabled = false;
+      lucide.createIcons();
+    }
+
+    convRemoveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      convSelectedFiles = [];
+      convFileInput.value = '';
+      convEmptyState.classList.remove('hidden');
+      convFileState.classList.add('hidden');
+      convertBtn.disabled = true;
+    });
+
+    convertBtn.addEventListener('click', async () => {
+      if (!convSelectedFiles.length) return;
+      hideError();
+      convertBtn.disabled = true;
+      document.getElementById('convert-btn-text').textContent = 'Converting...';
+      document.getElementById('convert-btn-spinner').classList.remove('hidden');
 
       const formData = new FormData();
-      for (const file of selectedFiles) {
-        formData.append('files', file);
-      }
+      convSelectedFiles.forEach(f => formData.append('files', f));
 
       try {
-        const response = await fetch('/v1/convert', {
-          method: 'POST',
-          body: formData,
+        const res = await fetch('/v1/convert', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.error || 'Conversion failed');
+        convResults = data.results || [];
+        if (!convResults.length) throw new Error('No results returned from converter.');
+
+        convActiveIdx = 0;
+        convFileSelector.innerHTML = '';
+        convResults.forEach((r, idx) => {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = r.status === 'success' ? r.filename : `⚠️ ${r.filename} (Failed)`;
+          convFileSelector.appendChild(opt);
         });
 
-        const data = await response.json();
+        if (convResults.length > 1) convFileSelectorContainer.classList.remove('hidden');
+        else convFileSelectorContainer.classList.add('hidden');
 
-        if (!response.ok) {
-          throw new Error(data.message || data.error || `Server error (${response.status})`);
-        }
-
-        convertedResults = data.results || [];
-        if (convertedResults.length === 0) throw new Error("No results returned.");
-        
-        currentPreviewIndex = 0;
-        
-        fileSelector.innerHTML = '';
-        convertedResults.forEach((res, idx) => {
-            const option = document.createElement('option');
-            option.value = idx;
-            option.textContent = res.status === 'success' ? res.filename : `⚠️ ${res.filename} (Failed)`;
-            fileSelector.appendChild(option);
-        });
-
-        if (convertedResults.length > 1) {
-            if (fileSelectorContainer) fileSelectorContainer.classList.remove('hidden');
-        } else {
-            if (fileSelectorContainer) fileSelectorContainer.classList.add('hidden');
-        }
-
-        renderResults();
+        renderConvResult();
+        convWorkspace.classList.remove('hidden');
+        convWorkspace.scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
-        showError(err.message || 'An unexpected error occurred during conversion.');
+        showError(err.message || 'Error occurred during conversion.');
       } finally {
-        setLoadingState(false);
-      }
-    });
-
-    fileSelector.addEventListener('change', (e) => {
-        currentPreviewIndex = parseInt(e.target.value, 10);
-        renderResults();
-    });
-
-    function setLoadingState(loading) {
-      if (loading) {
-        convertBtn.disabled = true;
-        convertBtnText.textContent = 'Converting...';
-        convertBtnSpinner.classList.remove('hidden');
-      } else {
         convertBtn.disabled = false;
-        convertBtnText.textContent = 'Convert to Markdown';
-        convertBtnSpinner.classList.add('hidden');
+        document.getElementById('convert-btn-text').textContent = 'Convert to Markdown';
+        document.getElementById('convert-btn-spinner').classList.add('hidden');
       }
-    }
+    });
 
-    // 4. Render Markdown Output
-    function renderResults() {
-      if (!convertedResults || convertedResults.length === 0) return;
-      
-      const currentResult = convertedResults[currentPreviewIndex];
-      
-      if (currentResult.status === 'success') {
-          panePreview.innerHTML = marked.parse(currentResult.markdown || '');
-          rawMarkdownCode.textContent = currentResult.markdown || '';
+    function renderConvResult() {
+      if (!convResults[convActiveIdx]) return;
+      const res = convResults[convActiveIdx];
+      if (res.status === 'success') {
+        let md = res.markdown || '';
+        if (res.images) {
+          for (const [path, b64] of Object.entries(res.images)) {
+            const mime = path.endsWith('.jpg') || path.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
+            const escaped = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            md = md.replace(new RegExp(`\\!\\[([^\\]]*)\\]\\(${escaped}\\)`, 'g'), `![$1](data:${mime};base64,${b64})`);
+          }
+        }
+        convPanePreview.innerHTML = marked.parse(md);
+        convRawCode.textContent = res.markdown || '';
       } else {
-          panePreview.innerHTML = `<div class="text-rose-400 p-4 border border-rose-500/30 bg-rose-500/10 rounded-xl">Error converting ${currentResult.filename}: ${currentResult.error}</div>`;
-          rawMarkdownCode.textContent = `Error: ${currentResult.error}`;
+        convPanePreview.innerHTML = `<div class="text-rose-400 p-4 border border-rose-500/30 bg-rose-500/10 rounded-xl">Error: ${res.error}</div>`;
+        convRawCode.textContent = `Error: ${res.error}`;
       }
-
-      resultsWorkspace.classList.remove('hidden');
-      resultsWorkspace.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // 5. Workspace Tab Switching
-    tabPreviewBtn.addEventListener('click', () => {
-      tabPreviewBtn.className = 'px-4 py-1.5 rounded-md text-xs font-medium bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all';
-      tabRawBtn.className = 'px-4 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all';
-      
-      panePreview.classList.remove('hidden');
-      paneRaw.classList.add('hidden');
+    convFileSelector.addEventListener('change', (e) => {
+      convActiveIdx = parseInt(e.target.value, 10);
+      renderConvResult();
     });
 
-    tabRawBtn.addEventListener('click', () => {
-      tabRawBtn.className = 'px-4 py-1.5 rounded-md text-xs font-medium bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all';
-      tabPreviewBtn.className = 'px-4 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all';
-      
-      paneRaw.classList.remove('hidden');
-      panePreview.classList.add('hidden');
+    document.getElementById('conv-tab-preview-btn').addEventListener('click', () => {
+      document.getElementById('conv-tab-preview-btn').className = 'px-4 py-1.5 rounded-md text-xs font-medium bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all';
+      document.getElementById('conv-tab-raw-btn').className = 'px-4 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all';
+      convPanePreview.classList.remove('hidden');
+      convPaneRaw.classList.add('hidden');
     });
 
-    // 6. Copy Markdown Action
-    copyBtn.addEventListener('click', async () => {
-      if (!convertedResults || convertedResults.length === 0) return;
-      const currentResult = convertedResults[currentPreviewIndex];
-      if (currentResult.status !== 'success') return;
+    document.getElementById('conv-tab-raw-btn').addEventListener('click', () => {
+      document.getElementById('conv-tab-raw-btn').className = 'px-4 py-1.5 rounded-md text-xs font-medium bg-brand-600 text-white shadow-sm flex items-center space-x-1.5 transition-all';
+      document.getElementById('conv-tab-preview-btn').className = 'px-4 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center space-x-1.5 transition-all';
+      convPaneRaw.classList.remove('hidden');
+      convPanePreview.classList.add('hidden');
+    });
+
+    document.getElementById('conv-copy-btn').addEventListener('click', async () => {
+      const res = convResults[convActiveIdx];
+      if (!res || res.status !== 'success') return;
+      await navigator.clipboard.writeText(res.markdown);
+      document.getElementById('conv-copy-text').textContent = 'Copied!';
+      setTimeout(() => document.getElementById('conv-copy-text').textContent = 'Copy Markdown', 2000);
+    });
+
+    document.getElementById('conv-download-btn').addEventListener('click', async () => {
+      const successful = convResults.filter(r => r.status === 'success');
+      if (!successful.length) return showError('No converted content to download.');
+
+      if (successful.length === 1 && (!successful[0].images || !Object.keys(successful[0].images).length)) {
+        const item = successful[0];
+        const base = item.filename.includes('.') ? item.filename.substring(0, item.filename.lastIndexOf('.')) : item.filename;
+        const blob = new Blob([item.markdown], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${base}.md`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+      } else {
+        const zip = new JSZip();
+        successful.forEach(item => {
+          const base = item.filename.includes('.') ? item.filename.substring(0, item.filename.lastIndexOf('.')) : item.filename;
+          zip.file(`${base}.md`, item.markdown);
+          if (item.images) {
+            for (const [p, b64] of Object.entries(item.images)) {
+              zip.file(p, b64, { base64: true });
+            }
+          }
+        });
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'converted_documents.zip';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+      }
+    });
+
+    // ==========================================
+    // 2. DATA MASKING VIEW LOGIC
+    // ==========================================
+    const maskDropzone = document.getElementById('mask-dropzone');
+    const maskFileInput = document.getElementById('mask-file-input');
+    const maskEmptyState = document.getElementById('mask-empty-state');
+    const maskFileState = document.getElementById('mask-file-state');
+    const maskFileName = document.getElementById('mask-file-name');
+    const maskFileSize = document.getElementById('mask-file-size');
+    const maskRemoveBtn = document.getElementById('mask-remove-file-btn');
+    const maskDryRunBtn = document.getElementById('mask-dryrun-btn');
+    const maskFinalBtn = document.getElementById('mask-final-btn');
+    const maskReportWorkspace = document.getElementById('mask-report-workspace');
+    const maskReportTbody = document.getElementById('mask-report-tbody');
+
+    let maskSelectedFiles = [];
+    let lastDryRunData = [];
+
+    ['dragenter', 'dragover'].forEach(e => maskDropzone.addEventListener(e, (ev) => { ev.preventDefault(); maskDropzone.classList.add('border-emerald-500', 'bg-emerald-500/10'); }));
+    ['dragleave', 'drop'].forEach(e => maskDropzone.addEventListener(e, (ev) => { ev.preventDefault(); maskDropzone.classList.remove('border-emerald-500', 'bg-emerald-500/10'); }));
+    maskDropzone.addEventListener('drop', (e) => { if (e.dataTransfer.files.length) handleMaskFiles(Array.from(e.dataTransfer.files)); });
+    maskFileInput.addEventListener('change', (e) => { if (e.target.files.length) handleMaskFiles(Array.from(e.target.files)); });
+
+    function handleMaskFiles(files) {
+      hideError();
+      const valid = [];
+      let totalSize = 0;
+      for (const f of files) {
+        const ext = f.name.split('.').pop().toLowerCase();
+        if (['docx', 'xlsx', 'csv', 'pdf'].includes(ext)) {
+          valid.push(f);
+          totalSize += f.size;
+        }
+      }
+      if (!valid.length) return showError('No valid documents (.docx, .xlsx, .csv, .pdf) selected.');
+      if (totalSize > 100 * 1024 * 1024) return showError('Total size exceeds 100 MB limit.');
+
+      maskSelectedFiles = valid;
+      maskFileName.textContent = valid.length === 1 ? valid[0].name : `${valid.length} files selected`;
+      maskFileSize.textContent = formatBytes(totalSize);
+      maskEmptyState.classList.add('hidden');
+      maskFileState.classList.remove('hidden');
+      maskDryRunBtn.disabled = false;
+      maskFinalBtn.disabled = false;
+      lucide.createIcons();
+    }
+
+    maskRemoveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      maskSelectedFiles = [];
+      maskFileInput.value = '';
+      maskEmptyState.classList.remove('hidden');
+      maskFileState.classList.add('hidden');
+      maskDryRunBtn.disabled = true;
+      maskFinalBtn.disabled = true;
+    });
+
+    function getMaskFormData(dryRun = false) {
+      const fd = new FormData();
+      maskSelectedFiles.forEach(f => fd.append('files', f));
+      fd.append('dry_run', dryRun ? 'true' : 'false');
+      fd.append('company_list', document.getElementById('mask-company-list').value);
+      fd.append('detect_company_auto', document.getElementById('mask-opt-company-auto').checked ? 'true' : 'false');
+      fd.append('detect_npwp', document.getElementById('mask-opt-npwp').checked ? 'true' : 'false');
+      fd.append('detect_rekening', document.getElementById('mask-opt-rekening').checked ? 'true' : 'false');
+      fd.append('detect_address', document.getElementById('mask-opt-address').checked ? 'true' : 'false');
+      return fd;
+    }
+
+    // Dry Run Action
+    maskDryRunBtn.addEventListener('click', async () => {
+      if (!maskSelectedFiles.length) return;
+      hideError();
+      maskDryRunBtn.disabled = true;
+      maskDryRunBtn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Scanning...</span>`;
+      lucide.createIcons();
 
       try {
-        await navigator.clipboard.writeText(currentResult.markdown);
-        copyBtnText.textContent = 'Copied!';
-        copyBtnIcon.setAttribute('data-lucide', 'check');
-        lucide.createIcons();
+        const res = await fetch('/v1/mask', { method: 'POST', body: getMaskFormData(true) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.error || 'Dry-run inspection failed.');
 
-        setTimeout(() => {
-          copyBtnText.textContent = 'Copy Markdown';
-          copyBtnIcon.setAttribute('data-lucide', 'copy');
-          lucide.createIcons();
-        }, 2000);
+        maskReportTbody.innerHTML = '';
+        lastDryRunData = [];
+        (data.results || []).forEach(fileRes => {
+          (fileRes.matches || []).forEach(m => {
+            lastDryRunData.push({ file: fileRes.filename, lokasi: m.lokasi, label: m.label, teks_asli: m.teks_asli });
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="p-3 text-slate-300">${fileRes.filename}</td>
+              <td class="p-3 text-slate-400">${m.lokasi}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">${m.label}</span></td>
+              <td class="p-3 text-amber-300/90">${m.teks_asli}</td>
+            `;
+            maskReportTbody.appendChild(tr);
+          });
+        });
+
+        maskReportWorkspace.classList.remove('hidden');
+        maskReportWorkspace.scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
-        showError('Failed to copy Markdown to clipboard.');
+        showError(err.message || 'Error occurred during dry-run.');
+      } finally {
+        maskDryRunBtn.disabled = false;
+        maskDryRunBtn.innerHTML = `<i data-lucide="file-search" class="w-4 h-4 text-slate-400"></i><span>Dry-Run (Inspect Matches)</span>`;
+        lucide.createIcons();
       }
     });
 
-    // 7. Download .md Action Handler
-    function downloadMarkdownFile(markdownString, originalFilename) {
-      if (!markdownString) return;
-
-      let baseName = originalFilename || 'converted_document';
-      const lastDotIndex = baseName.lastIndexOf('.');
-      if (lastDotIndex > 0) {
-        baseName = baseName.substring(0, lastDotIndex);
-      }
-      const filename = `${baseName}.md`;
-
-      const blob = new Blob([markdownString], { type: 'text/markdown;charset=utf-8' });
+    // Export Dry-Run CSV Report
+    document.getElementById('mask-download-report-btn').addEventListener('click', () => {
+      if (!lastDryRunData.length) return;
+      let csv = 'file,lokasi,label,teks_asli\n';
+      lastDryRunData.forEach(r => {
+        csv += `"${r.file}","${r.lokasi}","${r.label}","${(r.teks_asli || '').replace(/"/g, '""')}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      
-      setTimeout(() => {
-        if (document.body.contains(link)) document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 200);
-    }
-
-    downloadBtn.addEventListener('click', async () => {
-      if (!convertedResults || convertedResults.length === 0) return;
-
-      const successfulResults = convertedResults.filter(r => r.status === 'success');
-      if (successfulResults.length === 0) {
-          showError("No successful conversions to download.");
-          return;
-      }
-
-      if (successfulResults.length === 1) {
-          const res = successfulResults[0];
-          downloadMarkdownFile(res.markdown, res.filename);
-      } else {
-          try {
-              downloadBtn.disabled = true;
-              const originalContent = downloadBtn.innerHTML;
-              downloadBtn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Zipping...</span>`;
-              lucide.createIcons();
-
-              const zip = new JSZip();
-              successfulResults.forEach(res => {
-                  let baseName = res.filename || 'converted_document';
-                  const lastDotIndex = baseName.lastIndexOf('.');
-                  if (lastDotIndex > 0) {
-                      baseName = baseName.substring(0, lastDotIndex);
-                  }
-                  // Prevent duplicate filenames in zip
-                  let filename = `${baseName}.md`;
-                  let counter = 1;
-                  while (zip.file(filename)) {
-                      filename = `${baseName}_${counter}.md`;
-                      counter++;
-                  }
-                  zip.file(filename, res.markdown);
-              });
-
-              const content = await zip.generateAsync({type:"blob"});
-              const url = URL.createObjectURL(content);
-              
-              const link = document.createElement('a');
-              link.href = url;
-              link.setAttribute('download', 'converted_markdown_files.zip');
-              
-              document.body.appendChild(link);
-              link.click();
-              
-              setTimeout(() => {
-                  if (document.body.contains(link)) {
-                      document.body.removeChild(link);
-                  }
-                  URL.revokeObjectURL(url);
-              }, 200);
-
-              downloadBtn.disabled = false;
-              downloadBtn.innerHTML = originalContent;
-              lucide.createIcons();
-          } catch (err) {
-              downloadBtn.disabled = false;
-              showError("Failed to generate ZIP archive.");
-          }
-      }
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'redact_report.csv';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
     });
 
-    function showError(message) {
-      toastErrorMessage.textContent = message;
-      toastError.classList.remove('hidden');
-    }
+    // Final Redaction Action
+    maskFinalBtn.addEventListener('click', async () => {
+      if (!maskSelectedFiles.length) return;
+      hideError();
+      maskFinalBtn.disabled = true;
+      maskFinalBtn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Masking...</span>`;
+      lucide.createIcons();
 
-    function hideError() {
-      toastError.classList.add('hidden');
-    }
+      try {
+        const res = await fetch('/v1/mask', { method: 'POST', body: getMaskFormData(false) });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || errData.error || 'Redaction failed');
+        }
+        
+        const blob = await res.blob();
+        const header = res.headers.get('content-disposition');
+        let filename = 'redacted_documents.zip';
+        if (header && header.includes('filename=')) {
+          filename = header.split('filename=')[1].replace(/["']/g, '');
+        }
 
-    toastErrorClose.addEventListener('click', hideError);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+      } catch (err) {
+        showError(err.message || 'Error occurred during final redaction.');
+      } finally {
+        maskFinalBtn.disabled = false;
+        maskFinalBtn.innerHTML = `<i data-lucide="lock" class="w-4 h-4"></i><span>Redact & Download</span>`;
+        lucide.createIcons();
+      }
+    });
   </script>
 </body>
 </html>

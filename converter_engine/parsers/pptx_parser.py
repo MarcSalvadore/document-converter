@@ -8,20 +8,20 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.shapes.autoshape import Shape
 from pptx.text.text import _Paragraph
 
-from converter_engine.parsers import BaseParser
+from converter_engine.parsers import BaseParser, ParsedDocumentResult
 
 
 class PPTXParser(BaseParser):
     """Parser for extracting Markdown from PPTX files."""
 
-    def parse(self, source: Union[str, bytes, BinaryIO]) -> str:
+    def parse(self, source: Union[str, bytes, BinaryIO]) -> ParsedDocumentResult:
         """Parse PPTX presentation and return Markdown representation.
 
         Args:
             source: File path (str), raw bytes, or file-like binary stream.
 
         Returns:
-            Markdown text representation of the slides.
+            ParsedDocumentResult containing Markdown text of the slides and extracted images.
         """
         try:
             if isinstance(source, str):
@@ -38,9 +38,11 @@ class PPTXParser(BaseParser):
             raise ValueError(f"Failed to load PPTX presentation: {e}") from e
 
         slides_md: List[str] = []
+        extracted_images: Dict[str, bytes] = {}
 
         for slide_num, slide in enumerate(prs.slides, start=1):
             slide_blocks: List[str] = []
+            image_counter = 1
 
             # Add explicit slide divider header
             slide_header = f"--- \n\n**Slide {slide_num}**"
@@ -68,10 +70,19 @@ class PPTXParser(BaseParser):
                     table_md = self._parse_table(shape.table)
                     if table_md.strip():
                         slide_blocks.append(table_md)
+                elif shape.shape_type == MSO_SHAPE_TYPE.PICTURE or hasattr(shape, "image"):
+                    try:
+                        img_ext = shape.image.ext
+                        filename = f"assets/slide_{slide_num}_img_{image_counter}.{img_ext}"
+                        extracted_images[filename] = shape.image.blob
+                        slide_blocks.append(f"![Slide {slide_num} Image {image_counter}]({filename})")
+                        image_counter += 1
+                    except Exception:
+                        pass
 
             slides_md.append("\n\n".join(slide_blocks))
 
-        return "\n\n".join(slides_md)
+        return ParsedDocumentResult(markdown="\n\n".join(slides_md), images=extracted_images)
 
     def _parse_text_frame(self, text_frame) -> str:
         """Format text frame paragraphs into Markdown keeping indent hierarchy."""

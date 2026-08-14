@@ -7,13 +7,13 @@ from typing import BinaryIO, List, Union
 
 import openpyxl
 
-from converter_engine.parsers import BaseParser
+from converter_engine.parsers import BaseParser, ParsedDocumentResult
 
 
 class XLSXParser(BaseParser):
     """Parser for extracting Markdown from XLSX files."""
 
-    def parse(self, source: Union[str, bytes, BinaryIO]) -> str:
+    def parse(self, source: Union[str, bytes, BinaryIO]) -> ParsedDocumentResult:
         """Parse XLSX document and return raw Markdown representation.
 
         Args:
@@ -114,4 +114,4 @@ class XLSXParser(BaseParser):
                 
             md_blocks.append("\n".join(table_lines))
 
-        return "\n\n".join(md_blocks)
+        return ParsedDocumentResult(markdown="\n\n".join(md_blocks), images={})

@@ -6,7 +6,7 @@ import zipfile
 from typing import Dict, Optional, Type
 
 from converter_engine.core.standardizer import Standardizer
-from converter_engine.parsers import BaseParser
+from converter_engine.parsers import BaseParser, ParsedDocumentResult
 from converter_engine.parsers.docx_parser import DOCXParser
 from converter_engine.parsers.pptx_parser import PPTXParser
 from converter_engine.parsers.pdf_parser import PDFParser
@@ -29,8 +29,8 @@ class DocumentRouter:
             "htm": HTMLParser(),
         }
 
-    def convert(self, file_path: str) -> str:
-        """Convert document at file_path to standardized Markdown.
+    def convert(self, file_path: str) -> ParsedDocumentResult:
+        """Convert document at file_path to standardized Markdown and images.
 
         Args:
             file_path: Path to DOCX, PPTX, or PDF document.
@@ -54,13 +54,13 @@ class DocumentRouter:
             )
 
         parser = self._parsers[file_type]
-        raw_md = parser.parse(file_path)
-        standardized_md = Standardizer.standardize(raw_md)
+        parsed_result = parser.parse(file_path)
+        parsed_result.markdown = Standardizer.standardize(parsed_result.markdown)
 
-        return standardized_md
+        return parsed_result
 
-    def convert_bytes(self, file_bytes: bytes, filename: Optional[str] = None) -> str:
-        """Convert document from raw bytes in memory to standardized Markdown.
+    def convert_bytes(self, file_bytes: bytes, filename: Optional[str] = None) -> ParsedDocumentResult:
+        """Convert document from raw bytes in memory to standardized Markdown and images.
 
         Args:
             file_bytes: Raw binary content of document.
@@ -84,10 +84,10 @@ class DocumentRouter:
             )
 
         parser = self._parsers[file_type]
-        raw_md = parser.parse(file_bytes)
-        standardized_md = Standardizer.standardize(raw_md)
+        parsed_result = parser.parse(file_bytes)
+        parsed_result.markdown = Standardizer.standardize(parsed_result.markdown)
 
-        return standardized_md
+        return parsed_result
 
     def detect_file_type(self, file_path: str) -> str:
         """Detect document format via magic bytes and container structure with extension fallback.

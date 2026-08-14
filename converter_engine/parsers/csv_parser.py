@@ -4,13 +4,13 @@ import csv
 import os
 from typing import BinaryIO, List, Union
 
-from converter_engine.parsers import BaseParser
+from converter_engine.parsers import BaseParser, ParsedDocumentResult
 
 
 class CSVParser(BaseParser):
     """Parser for extracting Markdown from CSV files."""
 
-    def parse(self, source: Union[str, bytes, BinaryIO]) -> str:
+    def parse(self, source: Union[str, bytes, BinaryIO]) -> ParsedDocumentResult:
         """Parse CSV document and return raw Markdown representation.
 
         Args:
@@ -49,7 +49,7 @@ class CSVParser(BaseParser):
 
         lines = text_content.splitlines()
         if not lines:
-            return ""
+            return ParsedDocumentResult(markdown="", images={})
 
         # Use csv.Sniffer to detect delimiter
         sample = "\n".join(lines[:10])
@@ -63,7 +63,7 @@ class CSVParser(BaseParser):
         rows = list(reader)
 
         if not rows:
-            return ""
+            return ParsedDocumentResult(markdown="", images={})
 
         # Find header row
         header_idx = -1
@@ -73,7 +73,7 @@ class CSVParser(BaseParser):
                 break
 
         if header_idx == -1:
-            return ""
+            return ParsedDocumentResult(markdown="", images={})
 
         headers = rows[header_idx]
         records = rows[header_idx + 1:]
@@ -100,4 +100,4 @@ class CSVParser(BaseParser):
             sanitized_row = [sanitize(cell) for cell in row]
             table_lines.append("| " + " | ".join(sanitized_row) + " |")
             
-        return "\n".join(table_lines)
+        return ParsedDocumentResult(markdown="\n".join(table_lines), images={})

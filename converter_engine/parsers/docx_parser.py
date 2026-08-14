@@ -2,26 +2,27 @@
 
 import io
 import os
-from typing import BinaryIO, List, Optional, Union
+from typing import BinaryIO, List, Optional, Union, Dict
 import docx
 from docx.table import Table
 from docx.text.paragraph import Paragraph, Run
 from docx.oxml.ns import qn
+from docx.oxml.shape import CT_Picture
 
-from converter_engine.parsers import BaseParser
+from converter_engine.parsers import BaseParser, ParsedDocumentResult
 
 
 class DOCXParser(BaseParser):
     """Parser for extracting Markdown from DOCX files."""
 
-    def parse(self, source: Union[str, bytes, BinaryIO]) -> str:
+    def parse(self, source: Union[str, bytes, BinaryIO]) -> ParsedDocumentResult:
         """Parse DOCX document and return raw Markdown representation.
 
         Args:
             source: File path (str), raw bytes, or file-like binary stream.
 
         Returns:
-            Markdown text representation of the document.
+            ParsedDocumentResult containing Markdown text and image bytes.
         """
         try:
             if isinstance(source, str):
@@ -39,12 +40,14 @@ class DOCXParser(BaseParser):
 
 
         md_blocks: List[str] = []
+        extracted_images: Dict[str, bytes] = {}
+        image_counter = [1] # Use list to allow mutation in nested methods
 
         # Iterate through body elements in document order
         for element in doc.element.body:
             if element.tag.endswith("p"):
                 para = Paragraph(element, doc)
-                parsed_para = self._parse_paragraph(para, doc)
+                parsed_para = self._parse_paragraph(para, doc, extracted_images, image_counter)
                 if parsed_para.strip():
                     md_blocks.append(parsed_para)
             elif element.tag.endswith("tbl"):
@@ -53,12 +56,12 @@ class DOCXParser(BaseParser):
                 if parsed_tbl.strip():
                     md_blocks.append(parsed_tbl)
 
-        return "\n\n".join(md_blocks)
+        return ParsedDocumentResult(markdown="\n\n".join(md_blocks), images=extracted_images)
 
-    def _parse_paragraph(self, para: Paragraph, doc: docx.Document) -> str:
+    def _parse_paragraph(self, para: Paragraph, doc: docx.Document, images: Dict[str, bytes], image_counter: List[int]) -> str:
         """Format paragraph into Markdown according to style and inline runs."""
         style_name = para.style.name if para.style else ""
-        text = self._parse_runs_and_hyperlinks(para, doc).strip()
+        text = self._parse_runs_and_hyperlinks(para, doc, images, image_counter).strip()
 
         if not text:
             return ""
@@ -117,14 +120,30 @@ class DOCXParser(BaseParser):
 
         return 0
 
-    def _parse_runs_and_hyperlinks(self, para: Paragraph, doc: docx.Document) -> str:
-        """Extract paragraph text including inline formatting and hyperlinks."""
+    def _parse_runs_and_hyperlinks(self, para: Paragraph, doc: docx.Document, images: Dict[str, bytes], image_counter: List[int]) -> str:
+        """Extract paragraph text including inline formatting and hyperlinks, and extract images."""
         formatted_pieces: List[str] = []
 
         for child in para._p:
             if child.tag.endswith("r"):
                 run = Run(child, para)
                 formatted_pieces.append(self._format_run(run))
+                
+                # Check for images inside run
+                for elem in child.iter():
+                    if elem.tag.endswith("inline") or isinstance(elem, CT_Picture) or elem.tag.endswith("blip"):
+                        embed_id = elem.attrib.get(qn('r:embed'))
+                        if embed_id and embed_id in doc.part.rels:
+                            rel = doc.part.rels[embed_id]
+                            if "image" in rel.target_part.content_type:
+                                img_part = rel.target_part
+                                img_ext = img_part.partname.split('.')[-1]
+                                idx = image_counter[0]
+                                image_counter[0] += 1
+                                filename = f"assets/docx_img_{idx}.{img_ext}"
+                                images[filename] = img_part.blob
+                                formatted_pieces.append(f"\n\n![Image {idx}]({filename})\n\n")
+
             elif child.tag.endswith("hyperlink"):
                 # Extract text inside hyperlink node
                 link_text_pieces = []

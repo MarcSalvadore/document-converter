@@ -7,6 +7,7 @@ pdfplumber>=0.10.0          # Advanced PDF parsing (tables and text extraction)
 openpyxl>=3.1.0             # For parsing Excel (.xlsx) spreadsheets
 markdownify>=0.11.0         # For converting HTML to Markdown
 beautifulsoup4>=4.12.0      # For parsing and cleaning HTML
+Pillow>=9.5.0               # For extracting images from PDF documents
 
 # --- CLI & Terminal UI ---
 typer[all]>=0.9.0           # For building the command-line interface
@@ -19,3 +20,7 @@ python-multipart>=0.0.6     # Required by FastAPI for handling file uploads
 
 # --- HTTP Client ---
 httpx>=0.24.0               # Async HTTP client (used by FastAPI TestClient)
+
+# --- Data Masking (redacted tool) ---
+pandas>=2.0.0
+pdf2image>=1.16.3
