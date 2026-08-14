@@ -190,6 +190,12 @@
           <span class="text-amber-400 font-mono">.pptx</span>
           <span class="text-slate-600">•</span>
           <span class="text-rose-400 font-mono">.pdf</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-emerald-400 font-mono">.xlsx</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-teal-400 font-mono">.csv</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-orange-400 font-mono">.html</span>
         </div>
 
         <!-- API Health Status -->
@@ -223,7 +229,7 @@
     <!-- Upload Dropzone Section -->
     <section class="max-w-3xl mx-auto">
       <div id="dropzone" class="relative group border-2 border-dashed border-slate-800 hover:border-brand-500/60 bg-slate-900/40 hover:bg-slate-900/80 rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 shadow-xl shadow-slate-950/50">
-        <input type="file" id="file-input" accept=".docx,.pptx,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple />
+        <input type="file" id="file-input" accept=".docx,.pptx,.pdf,.xlsx,.csv,.html,.htm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" multiple />
 
         <div id="dropzone-empty-state" class="flex flex-col items-center justify-center space-y-4">
           <div class="w-16 h-16 rounded-2xl bg-slate-800/80 group-hover:bg-brand-500/10 group-hover:text-brand-400 text-slate-400 flex items-center justify-center transition-colors duration-200 shadow-inner">
@@ -238,7 +244,7 @@
             </p>
           </div>
           <div class="flex items-center space-x-2 text-xs text-slate-500 pt-2">
-            <span>Supports DOCX, PPTX, PDF</span>
+            <span>Supports DOCX, PPTX, PDF, XLSX, CSV, HTML</span>
             <span>•</span>
             <span>Up to 100MB</span>
           </div>
@@ -437,7 +443,7 @@
 
       for (const file of files) {
         const ext = file.name.split('.').pop().toLowerCase();
-        if (!['docx', 'pptx', 'pdf'].includes(ext)) {
+        if (!['docx', 'pptx', 'pdf', 'xlsx', 'csv', 'html', 'htm'].includes(ext)) {
           showError(`Unsupported file format '.${ext}' skipped.`);
           continue;
         }
@@ -468,6 +474,12 @@
           } else if (ext === 'pdf') {
             fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shadow-inner';
             document.getElementById('file-icon').setAttribute('data-lucide', 'file');
+          } else if (ext === 'xlsx' || ext === 'csv') {
+            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shadow-inner';
+            document.getElementById('file-icon').setAttribute('data-lucide', 'table');
+          } else if (ext === 'html' || ext === 'htm') {
+            fileIconContainer.className = 'w-16 h-16 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center shadow-inner';
+            document.getElementById('file-icon').setAttribute('data-lucide', 'globe');
           }
       } else {
           fileNameEl.textContent = `${selectedFiles.length} files selected`;

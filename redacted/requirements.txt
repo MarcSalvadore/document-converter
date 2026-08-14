@@ -1,0 +1,6 @@
+python-docx
+openpyxl
+pandas
+pdfplumber
+pdf2image
+Pillow

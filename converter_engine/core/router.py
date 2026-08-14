@@ -10,6 +10,9 @@ from converter_engine.parsers import BaseParser
 from converter_engine.parsers.docx_parser import DOCXParser
 from converter_engine.parsers.pptx_parser import PPTXParser
 from converter_engine.parsers.pdf_parser import PDFParser
+from converter_engine.parsers.xlsx_parser import XLSXParser
+from converter_engine.parsers.csv_parser import CSVParser
+from converter_engine.parsers.html_parser import HTMLParser
 
 
 class DocumentRouter:
@@ -20,6 +23,10 @@ class DocumentRouter:
             "docx": DOCXParser(),
             "pptx": PPTXParser(),
             "pdf": PDFParser(),
+            "xlsx": XLSXParser(),
+            "csv": CSVParser(),
+            "html": HTMLParser(),
+            "htm": HTMLParser(),
         }
 
     def convert(self, file_path: str) -> str:
@@ -113,11 +120,15 @@ class DocumentRouter:
                 except zipfile.BadZipFile:
                     pass
 
+            # HTML fallback via initial string check
+            if b"<html" in header.lower() or b"<!doctype html" in header.lower():
+                return "html"
+
         except Exception:
             pass
 
         # Fallback to extension matching
-        if ext in ("docx", "pptx", "pdf"):
+        if ext in ("docx", "pptx", "pdf", "xlsx", "csv", "html", "htm"):
             return ext
 
         return "unknown"
@@ -154,7 +165,11 @@ class DocumentRouter:
             except zipfile.BadZipFile:
                 pass
 
-        if ext in ("docx", "pptx", "pdf"):
+        # HTML fallback via initial string check
+        if b"<html" in header.lower() or b"<!doctype html" in header.lower():
+            return "html"
+
+        if ext in ("docx", "pptx", "pdf", "xlsx", "csv", "html", "htm"):
             return ext
 
         return "unknown"

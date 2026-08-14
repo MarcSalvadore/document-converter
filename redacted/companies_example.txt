@@ -1,0 +1,6 @@
+# Satu nama perusahaan per baris. Baris diawali '#' diabaikan.
+# Tulis nama sesuai bagaimana ia muncul di dokumen (tidak perlu "PT"/"Tbk"
+# kalau memang tidak selalu ditulis lengkap di dokumen kamu).
+Astra Internasional
+Bank Mandiri
+Telkom Indonesia
