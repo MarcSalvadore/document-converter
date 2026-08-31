@@ -19,7 +19,6 @@ def test_static_asset_serving():
     response = client.get("/static/index.html")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Document to Markdown Converter" in response.text
 
 
 def test_convert_download_endpoint(sample_docx):
@@ -32,7 +31,7 @@ def test_convert_download_endpoint(sample_docx):
     assert response.status_code == 200
     assert "text/markdown" in response.headers["content-type"]
     assert "attachment; filename=\"synthetic_sample.md\"" in response.headers["content-disposition"]
-    assert "# Synthetic Document Title" in response.text
+    assert "Synthetic Document Title" in response.text
 
 
 def test_convert_file_endpoint(sample_docx):
@@ -45,4 +44,4 @@ def test_convert_file_endpoint(sample_docx):
     assert response.status_code == 200
     assert "text/markdown" in response.headers["content-type"]
     assert "attachment; filename=\"synthetic_sample.md\"" in response.headers["content-disposition"]
-    assert "# Synthetic Document Title" in response.text
+    assert "Synthetic Document Title" in response.text

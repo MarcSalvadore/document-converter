@@ -1,26 +1,27 @@
 # --- Document Parsers ---
-python-docx>=1.1.0          # For parsing Microsoft Word (.docx) documents
-python-pptx>=0.6.23         # For parsing PowerPoint (.pptx) presentations
-pypdf>=4.0.0                # Core PDF processing library
-pdfminer.six>=20221105      # Required for PDF layout analysis
-pdfplumber>=0.10.0          # Advanced PDF parsing (tables and text extraction)
-openpyxl>=3.1.0             # For parsing Excel (.xlsx) spreadsheets
-markdownify>=0.11.0         # For converting HTML to Markdown
-beautifulsoup4>=4.12.0      # For parsing and cleaning HTML
-Pillow>=9.5.0               # For extracting images from PDF documents
+markitdown[all]
+python-docx==1.2.0          # For parsing Microsoft Word (.docx) documents
+python-pptx==1.0.2         # For parsing PowerPoint (.pptx) presentations
+pypdf==6.15.0                # Core PDF processing library
+pdfminer.six==20260107      # Required for PDF layout analysis
+pdfplumber==0.11.10          # Advanced PDF parsing (tables and text extraction)
+openpyxl==3.1.5             # For parsing Excel (.xlsx) spreadsheets
+markdownify==1.2.3         # For converting HTML to Markdown
+beautifulsoup4==4.15.0      # For parsing and cleaning HTML
+Pillow==12.3.0               # For extracting images from PDF documents
 
 # --- CLI & Terminal UI ---
-typer[all]>=0.9.0           # For building the command-line interface
-rich>=13.0.0                # For rich terminal output and progress indicators
+typer==0.27.1           # For building the command-line interface
+rich==15.0.0                # For rich terminal output and progress indicators
 
 # --- REST API & Web Server ---
-fastapi>=0.100.0            # Core framework for the REST API
-uvicorn[standard]>=0.22.0   # High-performance ASGI server for FastAPI
-python-multipart>=0.0.6     # Required by FastAPI for handling file uploads
+fastapi==0.141.1            # Core framework for the REST API
+uvicorn[standard]==0.52.1   # High-performance ASGI server for FastAPI
+python-multipart==0.0.32     # Required by FastAPI for handling file uploads
 
 # --- HTTP Client ---
-httpx>=0.24.0               # Async HTTP client (used by FastAPI TestClient)
+httpx==0.28.1               # Async HTTP client (used by FastAPI TestClient)
 
 # --- Data Masking (redacted tool) ---
-pandas>=2.0.0
-pdf2image>=1.16.3
+pandas==3.0.5
+pymupdf>=1.23.0
