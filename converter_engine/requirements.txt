@@ -25,3 +25,4 @@ httpx==0.28.1               # Async HTTP client (used by FastAPI TestClient)
 # --- Data Masking (redacted tool) ---
 pandas==3.0.5
 pymupdf>=1.23.0
+pytesseract>=0.3.10

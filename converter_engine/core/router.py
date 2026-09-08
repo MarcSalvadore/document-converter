@@ -28,6 +28,15 @@ class DocumentRouter:
 
     def __init__(self):
         self._md = MarkItDown(enable_plugins=False)
+        from converter_engine.parsers.pdf_parser import LegalPdfConverter
+        from converter_engine.parsers.pptx_parser import PPTXParser
+        from converter_engine.parsers.docx_parser import DOCXParser
+        from converter_engine.parsers.image_parser import ImageParser
+        
+        self._md.register_converter(LegalPdfConverter(), priority=-1.0)
+        self._md.register_converter(PPTXParser(), priority=-1.0)
+        self._md.register_converter(DOCXParser(), priority=-1.0)
+        self._md.register_converter(ImageParser(), priority=-1.0)
 
     def convert(self, file_path: str) -> ParsedDocumentResult:
         """Convert document at file_path to standardized Markdown and images.

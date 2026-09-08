@@ -11,7 +11,7 @@ from converter_engine.core.router import DocumentRouter
 router = APIRouter()
 START_TIME = time.time()
 
-ALLOWED_EXTENSIONS = {".docx", ".pptx", ".pdf"}
+ALLOWED_EXTENSIONS = {".docx", ".pptx", ".pdf", ".png", ".jpg", ".jpeg"}
 
 
 @router.get("/health", summary="Health Check", tags=["System"])
